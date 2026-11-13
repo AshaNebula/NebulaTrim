@@ -1,0 +1,12 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Type=Application
+Name=NebulaTrim
+GenericName=Editor de clips
+Comment=Recorta, une y cambia la velocidad de tus videos
+Exec=nebulatrim %F
+Icon=video-x-generic
+Terminal=false
+Categories=AudioVideo;Video;AudioVideoEditing;
+MimeType=video/mp4;video/x-matroska;video/quicktime;video/webm;video/x-msvideo;video/mpeg;video/mp2t;video/x-flv;video/3gpp;
+StartupWMClass=nebulatrim
