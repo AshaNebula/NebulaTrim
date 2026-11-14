@@ -113,6 +113,26 @@ double App::totalDuration() const {
     return total;
 }
 
+std::vector<std::string> App::splitTags() const {
+    std::vector<std::string> tags(clips_.size());
+    std::map<uint32_t, std::vector<size_t>> groups;
+    for (size_t i = 0; i < clips_.size(); ++i)
+        if (clips_[i].group) groups[clips_[i].group].push_back(i);
+    for (auto& [group, parts] : groups) {
+        if (parts.size() < 2) continue;  // a lone part is just a trimmed clip again
+        // Parts are numbered by their position inside the original video, wherever they sit.
+        std::sort(parts.begin(), parts.end(), [this](size_t a, size_t b) {
+            const Clip& x = clips_[a];
+            const Clip& y = clips_[b];
+            if (x.in != y.in) return x.in < y.in;
+            if (x.out != y.out) return x.out < y.out;
+            return x.id < y.id;
+        });
+        for (size_t k = 0; k < parts.size(); ++k) tags[parts[k]] = util::format("%u.%u", group, (unsigned)(k + 1));
+    }
+    return tags;
+}
+
 bool App::joined(int index) const {
     if (index < 0 || index + 1 >= (int)clips_.size()) return false;
     const Clip& a = clips_[(size_t)index];
@@ -295,8 +315,10 @@ void App::debugSplit(double seconds) {
 void App::debugDump() const {
     for (size_t i = 0; i < clips_.size(); ++i) {
         const Clip& c = clips_[i];
-        std::printf("clip %zu: %s in=%.4f out=%.4f speed=%.2f%s%s\n", i + 1, util::fileName(c.path).c_str(), c.in, c.out,
-                    c.speed, c.id == selectedId_ ? " [selected]" : "", joined((int)i) ? " joined->next" : "");
+        const std::vector<std::string> tags = splitTags();
+        std::printf("clip %zu: %s in=%.4f out=%.4f speed=%.2f%s%s%s\n", i + 1, util::fileName(c.path).c_str(), c.in,
+                    c.out, c.speed, tags[i].empty() ? "" : (" [Split " + tags[i] + "]").c_str(),
+                    c.id == selectedId_ ? " [selected]" : "", joined((int)i) ? " joined->next" : "");
     }
     std::printf("playhead=%.4f\n", player_.position());
     float a, b, t, unused;
@@ -395,10 +417,16 @@ void App::splitAtPlayhead() {
     }
     pause();
     pushUndo();
-    Clip second = c;
+    Clip& first = clips_[(size_t)idx];
+    if (first.group == 0) {  // first split of this clip: new group, numbered in split order
+        uint32_t next = 1;
+        for (const Clip& o : clips_) next = std::max(next, o.group + 1);
+        first.group = next;
+    }
+    Clip second = first;
     second.id = nextId_++;
     second.in = t;
-    clips_[(size_t)idx].out = t;
+    first.out = t;
     clips_.insert(clips_.begin() + idx + 1, second);
     selectedId_ = second.id;  // same file and position: the player does not need to move
     scrollToSelected_ = true;
@@ -424,6 +452,7 @@ void App::duplicateClip(int index) {
     pushUndo();
     Clip copy = clips_[(size_t)index];
     copy.id = nextId_++;
+    copy.group = 0;  // a copy is not a part of the original split
     clips_.insert(clips_.begin() + index + 1, copy);
 }
 
@@ -671,6 +700,10 @@ void App::toast(const std::string& text, bool error) {
 // UI
 
 void App::draw() {
+    tags_ = splitTags();
+    const int sel = selectedIndex();
+    relatedGroup_ = (sel >= 0 && !tags_[(size_t)sel].empty()) ? clips_[(size_t)sel].group : 0;
+
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->WorkPos);
     ImGui::SetNextWindowSize(vp->WorkSize);
@@ -938,10 +971,12 @@ void App::drawTimeline(Clip& c, const MediaInfo& mi, float height) {
     struct Sibling {
         int number;
         double in, out;
+        std::string tag;
     };
     std::vector<Sibling> siblings;
     for (size_t i = 0; i < clips_.size(); ++i)
-        if (clips_[i].id != c.id && clips_[i].path == c.path) siblings.push_back({(int)i + 1, clips_[i].in, clips_[i].out});
+        if (clips_[i].id != c.id && clips_[i].path == c.path)
+            siblings.push_back({(int)i + 1, clips_[i].in, clips_[i].out, i < tags_.size() ? tags_[i] : std::string()});
     auto snap = [&](double t, double& snappedTo) {
         snappedTo = -1;
         if (io.KeyShift) return t;  // fine mode: no magnet
@@ -1031,12 +1066,13 @@ void App::drawTimeline(Clip& c, const MediaInfo& mi, float height) {
 
     if (hovered && !active && !handleHot) {
         const double t = xToT(io.MousePos.x);
-        int part = 0;
+        const Sibling* part = nullptr;
         if (t < c.in || t > c.out)
             for (const Sibling& s : siblings)
-                if (t >= s.in && t <= s.out) part = s.number;
+                if (t >= s.in && t <= s.out) part = &s;
         if (part)
-            ImGui::SetTooltip("%s  ·  used by clip %d", util::formatTime(t).c_str(), part);
+            ImGui::SetTooltip("%s  ·  used by clip %d%s", util::formatTime(t).c_str(), part->number,
+                              part->tag.empty() ? "" : (" (Split " + part->tag + ")").c_str());
         else
             ImGui::SetTooltip("%s", util::formatTime(t).c_str());
     }
@@ -1177,7 +1213,9 @@ void App::drawVideoBar(float height) {
             dl->AddRect(ImVec2(a, yTop), ImVec2(b, yBot), ui::u32(ui::color::accent), r, 2.0f);
         } else {
             dl->AddRectFilled(ImVec2(a, yTop), ImVec2(b, yBot), IM_COL32(255, 255, 255, i == hoverClip ? 32 : 14), r);
-            dl->AddRect(ImVec2(a, yTop), ImVec2(b, yBot), IM_COL32(255, 255, 255, 80), r, 1.0f);
+            const bool related = relatedGroup_ && clips_[(size_t)i].group == relatedGroup_ && !tags_[(size_t)i].empty();
+            dl->AddRect(ImVec2(a, yTop), ImVec2(b, yBot),
+                        related ? ui::u32(ui::color::accent, 0.6f) : IM_COL32(255, 255, 255, 80), r, related ? 1.5f : 1.0f);
         }
         char number[16];
         std::snprintf(number, sizeof(number), "%d", i + 1);
@@ -1220,7 +1258,8 @@ void App::drawVideoBar(float height) {
                           "Hold Shift for fine control.",
                           hotCut + 1, hotCut + 2);
     else if (hoverClip >= 0)
-        ImGui::SetTooltip("%s  ·  clip %d", util::formatTime(xToT(io.MousePos.x)).c_str(), hoverClip + 1);
+        ImGui::SetTooltip("%s  ·  clip %d%s", util::formatTime(xToT(io.MousePos.x)).c_str(), hoverClip + 1,
+                          tags_[(size_t)hoverClip].empty() ? "" : ("  ·  Split " + tags_[(size_t)hoverClip]).c_str());
 }
 
 void App::drawClips(float height) {
@@ -1322,6 +1361,7 @@ void App::drawCard(int index, const Clip& c, float w, float h) {
     const uint64_t id = c.id;
     const std::string name = util::fileName(c.path);
 
+    debugPoints_["card-" + std::to_string(index + 1)] = {p.x + w * 0.5f, p.y + h * 0.5f};
     ImGui::BeginGroup();
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton("##card", size);
@@ -1387,8 +1427,24 @@ void App::drawCard(int index, const Clip& c, float w, float h) {
     const float ty = tp.y + ts.y + pad * 0.8f;
     ui::textEllipsis(dl, ImVec2(p.x + pad, ty), ui::u32(ui::color::text), name.c_str(), w - pad * 2);
     const std::string meta = util::formatTime((c.out - c.in) / c.speed);
-    dl->AddText(ImVec2(p.x + pad, ty + ImGui::GetTextLineHeight() + 2), ui::u32(ui::color::textDim), meta.c_str());
-    if (selected) dl->AddRect(p, p + size, ui::u32(ui::color::accent), rounding, 2.0f);
+    const float metaY = ty + ImGui::GetTextLineHeight() + 2;
+    dl->AddText(ImVec2(p.x + pad, metaY), ui::u32(ui::color::textDim), meta.c_str());
+    const std::string& tag = tags_[(size_t)index];
+    if (!tag.empty()) {  // "Split 1.2": which split video this part belongs to, and where it sits in it
+        const std::string label = "Split " + tag;
+        ImGui::PushFont(nullptr, ui::kFontSize * 0.82f);
+        const ImVec2 ls = ImGui::CalcTextSize(label.c_str());
+        const float padX = std::round(em * 0.35f), padY = std::round(em * 0.08f);
+        const ImVec2 c1(p.x + w - pad, std::round(metaY + (ImGui::GetTextLineHeight() + ls.y) * 0.5f + padY));
+        const ImVec2 c0(std::round(c1.x - ls.x - padX * 2), c1.y - ls.y - padY * 2);
+        dl->AddRectFilled(c0, c1, ui::u32(ui::color::accent, 0.18f), em * 0.3f);
+        dl->AddText(ImVec2(c0.x + padX, c0.y + padY), ui::u32(ui::color::accentHover), label.c_str());
+        ImGui::PopFont();
+    }
+    if (selected)
+        dl->AddRect(p, p + size, ui::u32(ui::color::accent), rounding, 2.0f);
+    else if (relatedGroup_ && c.group == relatedGroup_ && !tag.empty())  // another part of the selected video
+        dl->AddRect(p, p + size, ui::u32(ui::color::accent, 0.55f), rounding, 1.5f);
 
     if (hovered) {  // remove button
         const float bs = std::round(em * 1.35f);

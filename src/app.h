@@ -21,9 +21,12 @@ struct Clip {
     std::string path;
     double in = 0, out = 0;  // trimmed range inside the source file (seconds)
     float speed = 1.0f;
+    // Parts split from the same original share a group (numbered in the order videos were first
+    // split); 0 = never split.
+    uint32_t group = 0;
 
     bool operator==(const Clip& o) const {
-        return id == o.id && path == o.path && in == o.in && out == o.out && speed == o.speed;
+        return id == o.id && path == o.path && in == o.in && out == o.out && speed == o.speed && group == o.group;
     }
 };
 
@@ -80,6 +83,8 @@ private:
     double frameDuration(const Clip& c) const;
     double clipDuration(const Clip& c) const { return (c.out - c.in) / c.speed; }  // length in the final video
     double totalDuration() const;
+    // "group.part" tag of every clip that is part of a split video ("1.2"), empty otherwise.
+    std::vector<std::string> splitTags() const;
     // Clip `index` and the next one are consecutive parts of the same file (no gap, no overlap).
     bool joined(int index) const;
 
@@ -171,6 +176,8 @@ private:
     std::map<std::string, std::pair<float, float>> debugPoints_;
     bool scrollToSelected_ = false;
     std::vector<std::function<void()>> deferred_;
+    std::vector<std::string> tags_;  // split tags for this frame (see splitTags())
+    uint32_t relatedGroup_ = 0;     // split group of the selected clip: its other parts get outlined
 
     ExportJob export_;
     bool exportRequested_ = false;

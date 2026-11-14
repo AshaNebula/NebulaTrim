@@ -65,9 +65,9 @@ bool writePPM(const char* path, int w, int h, const std::vector<unsigned char>& 
 
 // Development aid (NEBULATRIM_SNAPSHOT=file.ppm): runs without showing the window, applies an
 // optional scripted setup, replays mouse gestures through real SDL events, then saves the
-// framebuffer and exits. Variables: NEBULATRIM_SNAPSHOT_{TRIM="in,out,speed", SPLIT=seconds,
+// framebuffer and exits. Variables: NEBULATRIM_SNAPSHOT_{TRIM="in,out,speed", SPLIT=seconds[,seconds...],
 // SEEK=seconds, PLAY=1|all|here, EXPORT=1, DRAG="point:dx[:shift];...", DELAY_MS=ms}.
-// Gesture points: cut, clip-in, clip-out, video@<0..1>; "key:<space|a-z>[:shift]" presses a key.
+// Gesture points: cut, clip-in, clip-out, video@<0..1>; "key:<space|delete|a-z>[:shift]" presses a key.
 class SnapshotRunner {
 public:
     SnapshotRunner(const char* path, SDL_Window* window) : path_(path), window_(window), start_(SDL_GetTicks()) {
@@ -144,7 +144,10 @@ private:
             double in = 0, out = 0, speed = 1;
             if (std::sscanf(trim, "%lf,%lf,%lf", &in, &out, &speed) == 3) app.debugTrim(in, out, (float)speed);
         }
-        if (const char* split = SDL_getenv("NEBULATRIM_SNAPSHOT_SPLIT")) app.debugSplit(std::atof(split));
+        if (const char* split = SDL_getenv("NEBULATRIM_SNAPSHOT_SPLIT")) {  // "5.0,7.5": splits in order
+            for (const char* at = split; at && *at; at = std::strchr(at, ',') ? std::strchr(at, ',') + 1 : nullptr)
+                app.debugSplit(std::atof(at));
+        }
         if (const char* seek = SDL_getenv("NEBULATRIM_SNAPSHOT_SEEK")) app.debugSeek(std::atof(seek));
         if (const char* play = SDL_getenv("NEBULATRIM_SNAPSHOT_PLAY")) {
             const std::string mode = play;
@@ -227,6 +230,9 @@ private:
         if (name == "space") {
             e.key.key = SDLK_SPACE;
             e.key.scancode = SDL_SCANCODE_SPACE;
+        } else if (name == "delete") {
+            e.key.key = SDLK_DELETE;
+            e.key.scancode = SDL_SCANCODE_DELETE;
         } else if (name.size() == 1 && name[0] >= 'a' && name[0] <= 'z') {
             e.key.key = (SDL_Keycode)name[0];  // SDL keycodes for letters are their lowercase ASCII
             e.key.scancode = (SDL_Scancode)(SDL_SCANCODE_A + (name[0] - 'a'));
