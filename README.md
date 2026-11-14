@@ -7,7 +7,6 @@ A small, focused video clip editor for **trimming**, **changing speed** (a free 
 NebulaTrim is for quick edits: cut the boring parts, speed up or slow down a section, stitch a few clips together and export. It deliberately has no audio editing, effects or multi-track timeline.
 
 - Written in C++17 with [SDL3](https://libsdl.org) and [Dear ImGui](https://github.com/ocornut/imgui) for the interface, [libmpv](https://mpv.io) for the preview, and the [FFmpeg](https://ffmpeg.org) command line for analysis and export.
-- No Electron and no embedded browser: the executable is about **1 MB**.
 - Runs on Linux and Windows.
 
 ## Why I made this
@@ -74,6 +73,8 @@ cmake --build build -j
 ./build/nebulatrim                      # or: ./build/nebulatrim video1.mp4 video2.mp4
 sudo cmake --install build              # optional: installs the binary and the .desktop launcher
 ```
+
+The compiler, CMake and the `-dev`/`-devel` packages are only needed to build. SDL3, mpv (libmpv) and FFmpeg are also needed to **run** NebulaTrim, so keep them installed: removing them breaks the app.
 
 The open/save dialogs use the desktop portal (`xdg-desktop-portal`) or `zenity`. Dragging files into the window always works.
 
