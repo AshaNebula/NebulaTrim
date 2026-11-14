@@ -96,7 +96,7 @@ MediaInfo probe(const std::string& path) {
     std::string out;
     int code = runCapture(args, Process::Stderr::Merge, out, 4 * 1024 * 1024);
     if (code == -1 && out.find(g_ffprobe) == 0) {
-        info.error = "No se pudo ejecutar ffprobe. ¿Está FFmpeg instalado?";
+        info.error = "Couldn't run ffprobe. Is FFmpeg installed?";
         return info;
     }
 
@@ -151,7 +151,7 @@ MediaInfo probe(const std::string& path) {
     }
 
     if (code != 0) {
-        info.error = firstError.empty() ? "ffprobe no pudo leer el archivo" : firstError;
+        info.error = firstError.empty() ? "ffprobe couldn't read the file" : firstError;
         return info;
     }
 
@@ -164,11 +164,11 @@ MediaInfo probe(const std::string& path) {
         }
     }
     if (!video) {
-        info.error = "El archivo no contiene video";
+        info.error = "The file has no video stream";
         return info;
     }
     if (!(duration > 0.05) || !std::isfinite(duration)) {
-        info.error = "No se pudo determinar la duración (¿es una imagen?)";
+        info.error = "Couldn't determine the duration (is it an image?)";
         return info;
     }
 
@@ -206,17 +206,17 @@ bool thumbnail(const std::string& path, double t, int w, int h, std::vector<unsi
 std::string detectVideoEncoder(std::string* error) {
     std::string out;
     if (runCapture({g_ffprobe, "-version"}, Process::Stderr::Merge, out) != 0) {
-        if (error) *error = "No se encontró ffprobe";
+        if (error) *error = "ffprobe not found";
         return std::string();
     }
     if (runCapture({g_ffmpeg, "-hide_banner", "-encoders"}, Process::Stderr::Merge, out) != 0) {
-        if (error) *error = "No se encontró ffmpeg";
+        if (error) *error = "ffmpeg not found";
         return std::string();
     }
     for (const char* enc : {"libx264", "libopenh264", "h264_mf", "mpeg4"}) {
         if (out.find(std::string(" ") + enc + " ") != std::string::npos) return enc;
     }
-    if (error) *error = "Tu FFmpeg no tiene ningún codificador de video compatible";
+    if (error) *error = "Your FFmpeg has no supported video encoder";
     return std::string();
 }
 

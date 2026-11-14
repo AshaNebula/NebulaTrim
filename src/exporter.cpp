@@ -186,7 +186,7 @@ void ExportJob::run(std::vector<std::string> args, double total, std::string out
     Process proc;
     std::string err;
     if (!proc.start(args, Process::Stderr::Merge, &err)) {
-        appendLog("No se pudo iniciar FFmpeg: " + err);
+        appendLog("Couldn't start FFmpeg: " + err);
         endMs_ = SDL_GetTicks();
         state_ = State::Failed;
         wakeMainLoop();
@@ -225,7 +225,7 @@ void ExportJob::run(std::vector<std::string> args, double total, std::string out
         state_ = State::Done;
     } else {
         util::removeFile(output);
-        if (log().empty()) appendLog(util::format("FFmpeg terminó con el código %d", code));
+        if (log().empty()) appendLog(util::format("FFmpeg exited with code %d", code));
         state_ = State::Failed;
     }
     wakeMainLoop();

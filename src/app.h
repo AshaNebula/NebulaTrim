@@ -49,7 +49,11 @@ public:
     // Test hooks used by the NEBULATRIM_SNAPSHOT mode.
     void debugSeek(double seconds);
     void debugTrim(double in, double out, float speed);
-    void debugPlay(bool all);
+    void debugSplit(double seconds);
+    void debugPlay(int mode);  // 0 = selected clip, 1 = whole video, 2 = video from the playhead
+    void debugDump() const;
+    // Screen position of a UI spot from the last frame ("cut", "video", "clip-in", "clip-out").
+    bool debugPoint(const std::string& name, float& x, float& y) const;
 
     // Thread-safe: runs `fn` on the main thread if the app still exists (used by file dialogs).
     static void postFromAnyThread(std::function<void(App&)> fn);
@@ -65,7 +69,8 @@ private:
         bool error = false;
         uint64_t until = 0;
     };
-    enum class Drag { None, Scrub, In, Out };
+    // Scrub/In/Out: clip bar. VideoScrub/Cut: whole-video bar.
+    enum class Drag { None, Scrub, In, Out, VideoScrub, Cut };
 
     // Queries
     int indexOf(uint64_t id) const;
@@ -73,7 +78,10 @@ private:
     Clip* selectedClip();
     const MediaInfo* info(const std::string& path) const;
     double frameDuration(const Clip& c) const;
+    double clipDuration(const Clip& c) const { return (c.out - c.in) / c.speed; }  // length in the final video
     double totalDuration() const;
+    // Clip `index` and the next one are consecutive parts of the same file (no gap, no overlap).
+    bool joined(int index) const;
 
     // Actions
     void defer(std::function<void()> fn) { deferred_.push_back(std::move(fn)); }
@@ -81,7 +89,8 @@ private:
     void select(int index, double position, bool scrollIntoView = true);
     void togglePlay();
     void pause();
-    void togglePlayAll();
+    // Plays the final video, from the beginning or from the playhead (continuing with the next clips).
+    void togglePlayAll(bool fromHere);
     void seekRelative(double delta);
     void stepFrame(bool forward);
     void setInAt(double t);
@@ -118,6 +127,7 @@ private:
     void drawEmptyState();
     void drawEditor(float height);
     void drawTimeline(Clip& c, const MediaInfo& mi, float height);
+    void drawVideoBar(float height);
     void drawClips(float height);
     void drawCard(int index, const Clip& c, float w, float h);
     void drawExportDialog();
@@ -147,9 +157,18 @@ private:
 
     bool playing_ = false;
     bool playAll_ = false;
+    bool playAllFromHere_ = false;  // the sequence playback started at the playhead
     Drag drag_ = Drag::None;
+    float dragX_ = 0;           // virtual mouse x while dragging (Shift = 10x finer)
+    float dragOriginX_ = 0;
+    bool dragMoved_ = false;    // edits only start once the mouse actually moves
+    double snapTime_ = -1;      // edge the clip bar handle snapped to (shown while dragging)
+    uint64_t cutLeft_ = 0, cutRight_ = 0;  // clips on each side of the cut being moved
+    double cutStart_ = 0;       // where the left clip starts in the final video
+    double cutScale_ = 0;       // video length frozen while a cut is moved (stable mapping)
     bool resumeAfterScrub_ = false;
     double lastSeekTarget_ = -1;
+    std::map<std::string, std::pair<float, float>> debugPoints_;
     bool scrollToSelected_ = false;
     std::vector<std::function<void()>> deferred_;
 

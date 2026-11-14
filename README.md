@@ -2,7 +2,7 @@
 
 A small, focused video clip editor for **trimming**, **changing speed** (a free slider from 0.1× to 10×) and **joining several clips** into a single video. Nothing more.
 
-![NebulaTrim](docs/captura.png)
+![NebulaTrim](docs/screenshot.png)
 
 NebulaTrim is for quick edits: cut the boring parts, speed up or slow down a section, stitch a few clips together and export. It deliberately has no audio editing, effects or multi-track timeline.
 
@@ -16,12 +16,14 @@ I just needed a lightweight video editor. I couldn't find one that fit what I wa
 
 ## Features
 
-- **Add videos** by dragging them into the window, with the *Agregar videos* button, or from the command line (`nebulatrim a.mp4 b.mkv`).
-- **Trim** by dragging the purple handles on the timeline, or place the playhead and press *Inicio aquí* (`I`) / *Fin aquí* (`O`). Frame stepping (`←` `→`) allows exact cuts.
-- **Split** a clip in two at the playhead (`S`), useful for removing a section from the middle or speeding up just one part.
+- **Add videos** by dragging them into the window, with the *Add videos* button, or from the command line (`nebulatrim a.mp4 b.mkv`).
+- **Trim** by dragging the pink handles on the clip bar, or place the playhead and press *Set start* (`I`) / *Set end* (`O`). Frame stepping (`←` `→`) allows exact cuts. Other clips cut from the same video appear in gray on the clip bar, and the handles snap to their edges.
+- **See the whole video** on the *Timeline* bar: the final video with one segment per clip, proportional to its length after speed changes (the selected clip in pink, the rest in gray). Click or drag on it to jump anywhere in the final video.
+- **Split** a clip in two at the playhead (`S`), useful for removing a section from the middle or speeding up just one part. The two parts stay joined: drag the handle between them on the *Timeline* bar to move the cut, and both parts keep continuing on the exact same frame.
+- **Fine control**: hold `Shift` while dragging a handle or a cut to move it 10× slower.
 - **Per-clip speed** with a continuous logarithmic slider (1× in the center). `Ctrl+click` the slider to type an exact value. Audio keeps its pitch.
 - **Reorder** clips by dragging their cards; right-click to duplicate, move or remove.
-- **Play everything** to preview the final result before exporting.
+- **Preview the final video** before exporting: *Play all* plays it from the beginning, and *Play from here* (`Shift+Space`) plays it from the playhead and goes on with the next clips, so you can check how two clips flow together without waiting for everything before them.
 - **Undo/redo** (`Ctrl+Z` / `Ctrl+Y`).
 - **Export** to MP4 (H.264 + AAC, or MKV / MOV) with a choice of resolution, FPS and quality. Clips with a different resolution or in portrait are letterboxed, phone videos are rotated automatically, and clips without audio are padded with silence.
 
@@ -29,7 +31,8 @@ I just needed a lightweight video editor. I couldn't find one that fit what I wa
 
 | Key | Action |
 |---|---|
-| `Space` / `K` | Play / pause |
+| `Space` / `K` | Play / pause the selected clip |
+| `Shift+Space` | Play the final video from the playhead (*Play from here*) |
 | `←` / `→` | Previous / next frame |
 | `Shift` + `←` / `→` | Back / forward 1 second |
 | `I` / `O` | Set trim start / end |
@@ -41,8 +44,9 @@ I just needed a lightweight video editor. I couldn't find one that fit what I wa
 | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
 | `Ctrl+O` | Add videos |
 | `Ctrl+E` | Export |
+| `Shift` + drag | Fine adjustment of handles and cuts |
 
-With the mouse: click the video to play/pause; click or drag on the timeline to move the playhead.
+With the mouse: click the video to play/pause; click or drag on the clip bar or the *Timeline* bar to move the playhead; drag the handle between two joined parts on the *Timeline* bar to move the cut.
 
 ## Requirements
 
@@ -109,7 +113,7 @@ On Windows, NebulaTrim looks for `ffmpeg.exe` and `ffprobe.exe` next to `nebulat
 | `NEBULATRIM_FFMPEG`, `NEBULATRIM_FFPROBE` | Path to alternative FFmpeg executables. |
 | `NEBULATRIM_MPV_OPTS` | Extra comma-separated mpv options for the preview, e.g. `hwdec=auto-safe,gpu-hwdec-interop=auto` to always decode on the GPU (less CPU, more RAM). |
 | `NEBULATRIM_DEBUG=1` | Prints playback decisions to the terminal. |
-| `NEBULATRIM_SNAPSHOT=capture.ppm` | (Development) Renders without showing the window, saves a frame and exits. |
+| `NEBULATRIM_SNAPSHOT=capture.ppm` | (Development) Renders without showing the window, optionally replays a scripted setup and mouse gestures, saves a frame and exits. See `SnapshotRunner` in `src/main.cpp`. |
 
 If an export fails, the dialog shows FFmpeg's error with a button to copy it.
 

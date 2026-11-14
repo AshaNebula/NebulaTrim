@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Compila NebulaTrim para Windows (x64) desde Linux y genera un .zip listo para usar.
+# Builds NebulaTrim for Windows (x64) from Linux and packages a ready-to-use .zip.
 #
-# La primera vez descarga (en .cache/windows/) el compilador llvm-mingw y las versiones
-# para Windows de SDL3, libmpv y FFmpeg (~210 MB). Requiere: cmake, curl, bsdtar (libarchive).
+# The first run downloads (into .cache/windows/) the llvm-mingw compiler and the Windows
+# builds of SDL3, libmpv and FFmpeg (~210 MB). Requires: cmake, curl, bsdtar (libarchive).
 #
 #   ./scripts/build-windows.sh
-#   -> dist/NebulaTrim-windows-x64/  y  dist/NebulaTrim-windows-x64.zip
+#   -> dist/NebulaTrim-windows-x64/  and  dist/NebulaTrim-windows-x64.zip
 #
-# Para usar otras versiones, cambia las URL de abajo.
+# To use other versions, change the URLs below.
 set -euo pipefail
 
 LLVM_MINGW_URL="https://github.com/mstorsjo/llvm-mingw/releases/download/20261104/llvm-mingw-20261104-ucrt-ubuntu-22.04-x86_64.tar.xz"
@@ -21,17 +21,17 @@ BUILD="$ROOT/build-win"
 DIST="$ROOT/dist/NebulaTrim-windows-x64"
 
 for tool in cmake curl bsdtar; do
-    command -v "$tool" >/dev/null || { echo "Falta '$tool'. Instálalo e inténtalo de nuevo." >&2; exit 1; }
+    command -v "$tool" >/dev/null || { echo "Missing '$tool'. Install it and try again." >&2; exit 1; }
 done
 
-# fetch <url> <carpeta>: descarga y extrae una sola vez
+# fetch <url> <dir>: downloads and extracts only once
 fetch() {
     local url=$1 dir=$CACHE/$2 file
     file=$CACHE/$(basename "$url")
     [ -f "$dir/.ok" ] && return 0
     mkdir -p "$CACHE"
     if [ ! -f "$file" ]; then
-        echo "Descargando $(basename "$url")..."
+        echo "Downloading $(basename "$url")..."
         curl -fL --retry 3 -o "$file.part" "$url"
         mv "$file.part" "$file"
     fi
@@ -50,7 +50,7 @@ SDL=$(find "$CACHE/sdl3" -maxdepth 2 -type d -name x86_64-w64-mingw32 | head -n1
 MPV="$CACHE/mpv"
 FFBIN=$(dirname "$(find "$CACHE/ffmpeg" -maxdepth 3 -type f -name ffmpeg.exe | head -n1)")
 [ -n "$LLVM" ] && [ -n "$SDL" ] && [ -f "$MPV/libmpv-2.dll" ] && [ -f "$FFBIN/ffmpeg.exe" ] || {
-    echo "Las dependencias descargadas no tienen la estructura esperada (borra $CACHE y reintenta)." >&2
+    echo "The downloaded dependencies don't have the expected layout (delete $CACHE and try again)." >&2
     exit 1
 }
 
@@ -81,6 +81,6 @@ FFLICENSE=$(find "$CACHE/ffmpeg" -maxdepth 2 -name 'LICENSE*' | head -n1)
 
 (cd "$DIST/.." && rm -f NebulaTrim-windows-x64.zip && bsdtar -a -cf NebulaTrim-windows-x64.zip NebulaTrim-windows-x64)
 echo
-echo "Listo:"
+echo "Done:"
 echo "  $DIST ($(du -sh "$DIST" | cut -f1))"
 echo "  $ROOT/dist/NebulaTrim-windows-x64.zip ($(du -sh "$ROOT/dist/NebulaTrim-windows-x64.zip" | cut -f1))"

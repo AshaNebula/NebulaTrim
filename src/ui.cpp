@@ -221,9 +221,9 @@ void drawIcon(ImDrawList* dl, Icon icon, ImVec2 c, float size, ImU32 col) {
 bool iconButton(const char* id, Icon icon, const char* tooltip, bool primary) {
     const float sz = ImGui::GetFrameHeight();
     if (primary) {
-        ImGui::PushStyleColor(ImGuiCol_Button, color::accent);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color::accentHover);
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, color::accentActive);
+        ImGui::PushStyleColor(ImGuiCol_Button, color::button);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color::buttonHover);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, color::buttonActive);
     }
     const bool pressed = ImGui::Button(id, ImVec2(sz, sz));
     if (primary) ImGui::PopStyleColor(3);
@@ -235,9 +235,9 @@ bool iconButton(const char* id, Icon icon, const char* tooltip, bool primary) {
 }
 
 bool primaryButton(const char* label, const ImVec2& size) {
-    ImGui::PushStyleColor(ImGuiCol_Button, color::accent);
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color::accentHover);
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color::accentActive);
+    ImGui::PushStyleColor(ImGuiCol_Button, color::button);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color::buttonHover);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, color::buttonActive);
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
     const bool pressed = ImGui::Button(label, size);
     ImGui::PopStyleColor(4);
@@ -246,6 +246,22 @@ bool primaryButton(const char* label, const ImVec2& size) {
 
 float buttonWidth(const char* label) {
     return ImGui::CalcTextSize(label, nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+std::string widestDigits(std::string text) {
+    char widest = '0';
+    float widestW = 0.0f;
+    for (char d = '0'; d <= '9'; ++d) {
+        const char glyph[2] = {d, '\0'};
+        const float w = ImGui::CalcTextSize(glyph).x;
+        if (w > widestW) {
+            widestW = w;
+            widest = d;
+        }
+    }
+    for (char& ch : text)
+        if (ch >= '0' && ch <= '9') ch = widest;
+    return text;
 }
 
 void textEllipsis(ImDrawList* dl, ImVec2 pos, ImU32 col, const char* text, float maxWidth) {

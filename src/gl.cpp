@@ -13,7 +13,7 @@ bool load() {
 #define NT_GL_LOAD(ret, name, args)                                                       \
     name = reinterpret_cast<ret(APIENTRY*) args>(SDL_GL_GetProcAddress("gl" #name));     \
     if (!name) {                                                                          \
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "OpenGL: falta gl%s", #name);          \
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "OpenGL: missing gl%s", #name);        \
         ok = false;                                                                       \
     }
     NT_GL_FUNCS(NT_GL_LOAD)

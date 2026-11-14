@@ -6,15 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Tipo de compilación" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-option(NEBULATRIM_TESTS "Compilar la prueba de exportación (requiere ffmpeg)" OFF)
+option(NEBULATRIM_TESTS "Build the export smoke test (requires ffmpeg)" OFF)
 
 find_package(Threads REQUIRED)
 find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3)
 
-# --- libmpv: pkg-config (Linux, MSYS2) o un SDK descomprimido en MPV_DIR (include/ + lib/) ---
+# --- libmpv: pkg-config (Linux, MSYS2) or an unpacked SDK in MPV_DIR (include/ + lib/) ---
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
   pkg_check_modules(MPV QUIET IMPORTED_TARGET mpv)
@@ -25,7 +25,7 @@ else()
   find_path(MPV_INCLUDE_DIR mpv/client.h HINTS ${MPV_DIR} PATH_SUFFIXES include)
   find_library(MPV_LIBRARY NAMES mpv libmpv mpv-2 libmpv-2 libmpv.dll.a HINTS ${MPV_DIR} PATH_SUFFIXES lib)
   if(NOT MPV_INCLUDE_DIR OR NOT MPV_LIBRARY)
-    message(FATAL_ERROR "No se encontró libmpv. Instala mpv (con libmpv) o usa -DMPV_DIR=<ruta al SDK de libmpv>")
+    message(FATAL_ERROR "libmpv not found. Install mpv (with libmpv) or pass -DMPV_DIR=<path to a libmpv SDK>")
   endif()
   add_library(nt_mpv UNKNOWN IMPORTED)
   set_target_properties(nt_mpv PROPERTIES

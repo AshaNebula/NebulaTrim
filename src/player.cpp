@@ -41,7 +41,7 @@ bool Player::init(SDL_Window* window, std::string* error) {
 
     mpv_ = mpv_create();
     if (!mpv_) {
-        if (error) *error = "mpv_create() falló";
+        if (error) *error = "mpv_create() failed";
         return false;
     }
 
@@ -92,7 +92,7 @@ bool Player::init(SDL_Window* window, std::string* error) {
     }
 
     if (mpv_initialize(mpv_) < 0) {
-        if (error) *error = "mpv_initialize() falló";
+        if (error) *error = "mpv_initialize() failed";
         mpv_terminate_destroy(mpv_);
         mpv_ = nullptr;
         return false;
@@ -118,7 +118,7 @@ bool Player::init(SDL_Window* window, std::string* error) {
     params.push_back({MPV_RENDER_PARAM_INVALID, nullptr});
 
     if (mpv_render_context_create(&render_, mpv_, params.data()) < 0) {
-        if (error) *error = "No se pudo crear el contexto de render de mpv (OpenGL)";
+        if (error) *error = "Couldn't create the mpv OpenGL render context";
         mpv_terminate_destroy(mpv_);
         mpv_ = nullptr;
         render_ = nullptr;
@@ -142,7 +142,7 @@ bool Player::init(SDL_Window* window, std::string* error) {
     GLenum status = gl::CheckFramebufferStatus(GL_FRAMEBUFFER);
     gl::BindFramebuffer(GL_FRAMEBUFFER, 0);
     if (status != GL_FRAMEBUFFER_COMPLETE) {
-        if (error) *error = "El framebuffer de video no es válido";
+        if (error) *error = "The video framebuffer is incomplete";
         shutdown();
         return false;
     }
@@ -194,7 +194,7 @@ void Player::load(const std::string& path, double start, bool heavy) {
     std::memset(&result, 0, sizeof(result));
     expectedEntry_ = -1;
     if (mpv_command_node(mpv_, &cmd, &result) < 0) {
-        error_ = "No se pudo abrir el video";
+        error_ = "Couldn't open the video";
         return;
     }
     if (result.format == MPV_FORMAT_NODE_MAP && result.u.list) {
